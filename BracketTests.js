@@ -99,37 +99,37 @@ test("Draw tree", function()
 /*
  * Get an array representation of this bracket:
  * 
- * Oregon       51
+ * 1 Oregon       51
  *                  Oregon      66
- * Oregon State 48
+ * 8 Oregon State 48
  * 
  *                                  Oregon     71
  * 
- * Washington   78
+ * 7 Washington   78
  *                  Washington  59
- * WSU          66
+ * 6 WSU          66
  * 
  *                                                  Oregon
  * 
- * Cal          22
+ * 5 Cal          22
  *                  Stanford    72
- * Stanford     58
+ * 4 Stanford     58
  * 
  *                                  Stanford   70
  * 
- * USC          38
+ * 3 USC          38
  *                  UCLA        71
- * UCLA         42
+ * 2 UCLA         42
  */        
 function getBalancedTestBracketArray()
 {
-    return [[1,2,"Oregon","Stanford",71,70,"Oregon"],
-           [3,4,"Oregon","Washington",66,59,"Oregon"],
-           [5,6,"Stanford","UCLA",72,71,"Stanford"],
-           [-1,-1,"Oregon","Oregon State",51,48,"Oregon"],
-           [-1,-1,"Washington","Washington State",78,66,"Washington"],
-           [-1,-1,"Cal","Stanford",22,58,"Stanford"],
-           [-1,-1,"USC","UCLA",38,42,"UCLA"]];
+    return [[1,2,"Oregon","Stanford",71,70,"Oregon", 1, 4],
+           [3,4,"Oregon","Washington",66,59,"Oregon", 1, 7],
+           [5,6,"Stanford","UCLA",72,71,"Stanford", 4, 2],
+           [-1,-1,"Oregon","Oregon State",51,48,"Oregon", 1, 8],
+           [-1,-1,"Washington","Washington State",78,66,"Washington", 7, 6],
+           [-1,-1,"Cal","Stanford",22,58,"Stanford", 5, 4],
+           [-1,-1,"USC","UCLA",38,42,"UCLA", 3, 2]];
 }
 
 var balancedInitialBracket = [[1,2, "", "", -1, -1, ""],

@@ -142,28 +142,30 @@ var missColor = "red";
  * array[i][4] The first team's score for this match
  * array[i][5] The second team's score for this match
  * array[i][6] The name of the team that won this match
+ * array[i][7] The seed number of team1
+ * array[i][8] The seed number of team2
  * 
  * example:
  * 
- * matches = [[1,2,"Oregon","Stanford",71,70,"Oregon"],
- *            [3,4,"Oregon","Washington",66,59,"Oregon"],
- *            [5,6,"Stanford","UCLA",72,71,"Stanford"],
- *            [-1,-1,"Oregon","Oregon State",51,48,"Oregon"],
- *            [-1,-1,"Washington","Washington State",78,66,"Washington"],
- *            [-1,-1,"Cal","Stanford",22,58,"Stanford"],
- *            [-1,-1,"USC","UCLA",38,42,"UCLA"]];
+ * matches = [[1,2,"Oregon","Stanford",71,70,"Oregon", 1, 16],
+ *            [3,4,"Oregon","Washington",66,59,"Oregon", 2, 5],
+ *            [5,6,"Stanford","UCLA",72,71,"Stanford", 6, 2],
+ *            [-1,-1,"Oregon","Oregon State",51,48,"Oregon", 1, 3],
+ *            [-1,-1,"Washington","Washington State",78,66,"Washington", 3, 1],
+ *            [-1,-1,"Cal","Stanford",22,58,"Stanford", 7, 13],
+ *            [-1,-1,"USC","UCLA",38,42,"UCLA", 12, 14]];
  * 
  * matches[0][0] contains the index of matches[1], matches[0][1] contains the index of matches[2],
  * Oregon and Washington are the two teams in this match, 71 and 70 are the respective scores, 
  * and Oregon is the winner of the match.
  */
-var bracketData; /*=[[1,2,"","",-1,-1,""],
-            [3,4,"","",-1,-1,""],
-             [5,6,"","",-1,-1,""],
-             [-1,-1,"Oregon","Oregon State",51,48,"Oregon"],
-             [-1,-1,"Washington","Washington State",78,66,"Washington"],
-             [-1,-1,"Cal","Stanford",22,58,"Stanford"],
-             [-1,-1,"USC","UCLA",38,42,"UCLA"]];*/
+var bracketData= [[1,2,"Oregon","Stanford",71,70,"Oregon", 1, 4],
+           [3,4,"Oregon","Washington",66,59,"Oregon", 1, 7],
+           [5,6,"Stanford","UCLA",72,71,"Stanford", 4, 2],
+           [-1,-1,"Oregon","Oregon State",51,48,"Oregon", 1, 8],
+           [-1,-1,"Washington","Washington State",78,66,"Washington", 7, 6],
+           [-1,-1,"Cal","Stanford",22,58,"Stanford", 5, 4],
+           [-1,-1,"USC","UCLA",38,42,"UCLA", 3, 2]];
 /*
  * Master bracket for the tournament.  Has same format as bracketData.
  */
@@ -197,6 +199,8 @@ function MatchNode()
     this.id = "";
     this.isDummy = true;
     this.parentNode = null;
+    this.team1Seed = 0;
+    this.team2Seed = 0;
 }
 
 /*
@@ -220,18 +224,6 @@ MatchNode.prototype.isEmpty = function()
     return (this.team1Name === "" && this.team2Name === "");
 };
 
-/*
- * Transform an existing node into an empty node.
- */
-MatchNode.prototype.empty = function()
-{
-    this.team1Name = "";
-    this.team2Name = "";
-    this.team1Score = -1;
-    this.team2Score = -1;
-    this.winnerName = "";
-}
-;
 //</editor-fold>
 
 //<editor-fold desc="MatchTree">
@@ -276,12 +268,8 @@ MatchNode.prototype.empty = function()
  */
 function MatchTree(matchData)
 {
-    if (!matchData)
-    {
-        matchData = bracketData;
-    }
+    this.matchData = (!matchData) ? bracketData : matchData;
     this.matchNodes = new Array();
-    this.matchData = matchData;
     this.rootNode = this.createMatchTree();
     this.perfectMatchTree();
     this.generatePositionalData();
@@ -307,9 +295,12 @@ MatchTree.prototype.createMatchTree = function()
     rootNode.team1Score = this.matchData[0][4];
     rootNode.team2Score = this.matchData[0][5];
     rootNode.winnerName = this.matchData[0][6];
+    rootNode.team1Seed = this.matchData[0][7];
+    rootNode.team2Seed = this.matchData[0][8];
+    rootNode["winnerSeed"] = (this.team1Name === this.winnerName) ? this.matchData[0][7] : this.matchData[0][8];
     rootNode.id = "1";
     rootNode.isDummy = false;
-    
+     
     // call the recursive function to create the parent matches
     rootNode.parentMatch1 = this.recCreateMatchTree(this.matchData[0][0], 2, rootNode);
     rootNode.parentMatch2 = this.recCreateMatchTree(this.matchData[0][1], 3, rootNode);
@@ -347,6 +338,8 @@ MatchTree.prototype.recCreateMatchTree = function(index, idNumber, parentNode)
         node.team1Score = this.matchData[index][4];
         node.team2Score = this.matchData[index][5];
         node.winnerName = this.matchData[index][6];
+        node.team1Seed = this.matchData[index][7];
+        node.team2Seed = this.matchData[index][8];
         node.parentMatch1 = this.recCreateMatchTree(this.matchData[index][0], 2 * idNumber, node);
         node.parentMatch2 = this.recCreateMatchTree(this.matchData[index][1], 2 * idNumber + 1, node);
         node.isDummy = false;
@@ -466,8 +459,8 @@ MatchTree.prototype.recGetHeight = function(node)
  */
 MatchTree.prototype.generatePositionalData = function()
 {
-    this.rootNode["resultBox1"] = new ResultBox(this.rootNode.team1Name, this.rootNode.team1Score, minSpacesBetweenTeamAndScore, this.matchData);
-    this.rootNode["resultBox2"] = new ResultBox(this.rootNode.team2Name, this.rootNode.team2Score, minSpacesBetweenTeamAndScore, this.matchData);
+    this.rootNode["resultBox1"] = new ResultBox(this.rootNode.team1Name, this.rootNode.team1Seed, this.rootNode.team1Score, minSpacesBetweenTeamAndScore, this.matchData);
+    this.rootNode["resultBox2"] = new ResultBox(this.rootNode.team2Name, this.rootNode.team2Seed, this.rootNode.team2Score, minSpacesBetweenTeamAndScore, this.matchData);
     
     if (this.rootNode.isLeaf())
     {
@@ -478,7 +471,7 @@ MatchTree.prototype.generatePositionalData = function()
         this.rootNode.resultBox2.y = yCanvasMargin + this.rootNode.resultBox2.height + 
                                      minYDistBetweenBoxes;
         // only the root node has the winnerBox property
-        this.rootNode["winnerBox"] = new ResultBox(this.rootNode.winnerName, -1, minSpacesBetweenTeamAndScore, this.matchData);
+        this.rootNode["winnerBox"] = new ResultBox(this.rootNode.winnerName, this.rootNode.winnerSeed, -1, minSpacesBetweenTeamAndScore, this.matchData);
         this.rootNode.winnerBox.x = this.rootNode.resultBox1.x + this.rootNode.resultBox1.width + 
                                     minXDistBetweenBoxes;
         this.rootNode.winnerBox.y = (this.rootNode.resultBox1.y + this.rootNode.resultBox2.y) / 2;
@@ -512,7 +505,7 @@ MatchTree.prototype.generatePositionalData = function()
                                      minXDistBetweenBoxes;
         this.rootNode.resultBox2.y = (this.rootNode.parentMatch2.resultBox1.y + 
                                       this.rootNode.parentMatch2.resultBox2.y) / 2;
-        this.rootNode["winnerBox"] = new ResultBox(this.rootNode.winnerName, -1, minSpacesBetweenTeamAndScore, this.matchData);
+        this.rootNode["winnerBox"] = new ResultBox(this.rootNode.winnerName, this.rootNode.winnerSeed, -1, minSpacesBetweenTeamAndScore, this.matchData);
         this.rootNode.winnerBox.x = this.rootNode.resultBox1.x + this.rootNode.resultBox1.width + minXDistBetweenBoxes;
         this.rootNode.winnerBox.y = (this.rootNode.resultBox1.y + this.rootNode.resultBox2.y) / 2;
     }
@@ -533,8 +526,8 @@ MatchTree.prototype.recGeneratePositionalData = function(node, siblingYPos)
         return;   
     }
     
-    node["resultBox1"] = new ResultBox(node.team1Name, node.team1Score, minSpacesBetweenTeamAndScore, this.matchData);
-    node["resultBox2"] = new ResultBox(node.team2Name, node.team2Score, minSpacesBetweenTeamAndScore, this.matchData);
+    node["resultBox1"] = new ResultBox(node.team1Name, node.team1Seed, node.team1Score, minSpacesBetweenTeamAndScore, this.matchData);
+    node["resultBox2"] = new ResultBox(node.team2Name, node.team2Seed, node.team2Score, minSpacesBetweenTeamAndScore, this.matchData);
     
     // found a leaf
     if (node.isLeaf())
@@ -708,13 +701,13 @@ MatchTree.prototype.addButtons = function()
         // add new properties, button1 and button2 for team1 and team2 so that buttons can be rendered in interactive mode
         this.rootNode["button1"] = new Button(new Rect(this.rootNode.resultBox1.x, this.rootNode.resultBox1.y,
                                              this.rootNode.resultBox1.height, this.rootNode.resultBox1.width),
-                                             this.rootNode.team1Name, this.rootNode.id + "1");
+                                             this.rootNode.team1Name, this.rootNode.team1Seed, this.rootNode.id + "1");
         this.rootNode["button2"] = new Button(new Rect(this.rootNode.resultBox2.x, this.rootNode.resultBox2.y,
                                              this.rootNode.resultBox2.height, this.rootNode.resultBox2.width),
-                                             this.rootNode.team2Name, this.rootNode.id + "2");         
+                                             this.rootNode.team2Name, this.rootNode.team2Seed, this.rootNode.id + "2");         
         this.rootNode["winnerButton"] = new Button(new Rect(this.rootNode.winnerBox.x, this.rootNode.winnerBox.y,
                                              this.rootNode.winnerBox.height, this.rootNode.winnerBox.width),
-                                             this.rootNode.winnerName, this.rootNode.id + "0");
+                                             this.rootNode.winnerName, this.rootNode.winnerSeed, this.rootNode.id + "0");
     }
     
     this.recAddButtons(this.rootNode.parentMatch1);
@@ -733,10 +726,10 @@ MatchTree.prototype.recAddButtons = function(node)
         // add new properties, button1 and button2 for team1 and team2 so that buttons can be rendered in interactive mode
         node["button1"] = new Button(new Rect(node.resultBox1.x, node.resultBox1.y,
                                              node.resultBox1.height, node.resultBox1.width),
-                                             node.team1Name, node.id.toString() + "1");
+                                             node.team1Name, node.team1Seed, node.id.toString() + "1");
         node["button2"] = new Button(new Rect(node.resultBox2.x, node.resultBox2.y,
                                              node.resultBox2.height, node.resultBox2.width),
-                                             node.team2Name, node.id.toString() + "2");    
+                                             node.team2Name, node.team2Seed, node.id.toString() + "2");    
     }
     
     this.recAddButtons(node.parentMatch1);
@@ -768,7 +761,7 @@ MatchTree.prototype.recShiftButtons = function(node, xOffset, yOffset)
     
     this.recShiftButtons(node.parentMatch1, xOffset, yOffset);
     this.recShiftButtons(node.parentMatch2, xOffset, yOffset);
-}
+};
 
 /*
  * Draw the buttons for the tree.
@@ -892,7 +885,7 @@ MatchTree.prototype.getNodeContainingButton = function(buttonID)
     }
     
     return node;
-}
+};
 
 /*
  * Recursive helper to getNodeContainingButton()
@@ -927,7 +920,7 @@ MatchTree.prototype.recGetNodeContainingButton = function (node, buttonID)
     }
     
     return matchingNode;
-}
+};
 
 /*
  * Add each button's team to the corresponding MatchNode's team in the match tree.
@@ -971,7 +964,7 @@ MatchTree.prototype.syncTreeWithUserBracket = function()
         this.recSyncWithUserBracket(this.rootNode.parentMatch1);
         this.recSyncWithUserBracket(this.rootNode.parentMatch2);
     }
-}
+};
 
 MatchTree.prototype.recSyncWithUserBracket = function(node)
 {
@@ -999,13 +992,13 @@ MatchTree.prototype.recSyncWithUserBracket = function(node)
  * @param string - the DOM id of the button
  * @returns Button
  */
-function Button(frame, team, id)
+function Button(frame, team, seedNumber, id)
 {
     // size and location of the button
     this.frame = frame;
     this.team = team;
     this.id = id;
-    this.buttonCode = "<button id=\"" + this.id + "\" class=\"bracketButton\">" + 
+    this.buttonCode = "<button id=\"" + "(" + seedNumber + ") " + this.id + "\" class=\"bracketButton\">" + 
                        this.team + "</button>";
 }
 
@@ -1019,7 +1012,7 @@ Button.prototype.offset = function(xOffset, yOffset)
 {
     this.frame.x += xOffset;
     this.frame.y += yOffset;
-}
+};
 
 /*
  * Render the button according to the button properties.
@@ -1383,13 +1376,13 @@ MatchTree.prototype.drawLinesBetweenResultBoxes = function(resultBox1, resultBox
  *                             the team name and the score
  * @returns {ResultBox}
  */
-function ResultBox(teamName, score, minPixels, matchData)
+function ResultBox(teamName, seedNumber, score, minPixels, matchData)
 {
     var x = 0;
     var y = 0;
     var width;
     var height;
-    this.teamName = teamName;
+    this.teamName = "(" + seedNumber + ") " + teamName;
     this.score = (score === -1) ? "" : score.toString();
 
     if (!textBoxHeight)
@@ -1766,3 +1759,50 @@ function saveBracket()
     return JSON.stringify(matchTree.matchData);
 }
 
+function clearButtons()
+{
+    if (bracketType !== "INTERACTIVE")
+    {
+        return;
+    }
+    
+    var matchTree = new MatchTree(masterBracketData);
+    var button = getDOMButton("10");
+    button.html("");
+    
+    if (matchTree.rootNode.parentMatch1)
+    {
+        button = getDOMButton("11");
+        button.html("");
+        recClearButtons(matchTree.rootNode.parentMatch1);
+    }
+    
+    if (matchTree.rootNode.parentMatch2)
+    {
+        button = getDOMButton("12");
+        button.html("");
+        recClearButtons(matchTree.rootNode.parentMatch2);
+    }
+}
+
+function recClearButtons(node)
+{
+    if (!node)
+    {
+        return;
+    }
+    
+    if (node.parentMatch1)
+    {
+        button = getDOMButton(node.id + "1");
+        button.html("");
+        recClearButtons(node.parentMatch1);
+    }
+    
+    if (node.parentMatch2)
+    {
+        button = getDOMButton(node.id + "2");
+        button.html("");
+        recClearButtons(node.parentMatch2);
+    }
+}
